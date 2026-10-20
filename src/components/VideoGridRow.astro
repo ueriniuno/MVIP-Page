@@ -1,0 +1,158 @@
+---
+/**
+ * One row of side-by-side videos. The row loads when it nears the viewport, its videos start
+ * together once all can play, loop together, and pause when scrolled out (or hidden).
+ * If the row has prompts, a "Show prompts" toggle reveals one prompt box under each column.
+ */
+import type { GridColumn, GridRow } from "../data/grids";
+import { asset } from "../lib/assets";
+
+interface Props {
+  columns: GridColumn[];
+  row: GridRow;
+}
+
+const { columns, row } = Astro.props;
+const gridStyle = `grid-template-columns: repeat(${columns.length}, minmax(0, 1fr));`;
+const PLACEHOLDERS = new Set(["Not applicable", "Empty prompt"]);
+---
+
+<div class="flex flex-col gap-2" data-row>
+  {
+    row.caption && (
+      <p class="m-0 text-sm">
+        <span class="text-zinc-500 dark:text-zinc-400">Edit instruction: </span>
+        <span class="font-medium">{row.caption}</span>
+      </p>
+    )
+  }
+  <div class="grid gap-2" style={gridStyle}>
+    {
+      columns.map((column, index) => (
+        <video
+          data-src={asset(row.videos[index])}
+          class:list={[
+            "aspect-video w-full rounded-lg bg-zinc-100 object-cover dark:bg-zinc-800",
+            column.ours &&
+              "outline-2 outline-offset-2 outline-blue-600 dark:outline-blue-400",
+          ]}
+          muted
+          playsinline
+          preload="none"
+        />
+      ))
+    }
+  </div>
+  {
+    row.prompts && (
+      <>
+        <button
+          type="button"
+          data-toggle-prompts
+          aria-expanded="false"
+          class="self-start text-xs font-medium text-zinc-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400"
+        >
+          <span data-label-show>Show prompts ▾</span>
+          <span data-label-hide class="hidden">
+            Hide prompts ▴
+          </span>
+        </button>
+        <div class="hidden gap-2" style={gridStyle} data-prompts>
+          {row.prompts.map((prompt, index) => (
+            <div
+              class:list={[
+                "rounded-lg border px-3 py-2 text-xs leading-relaxed whitespace-pre-line",
+                columns[index]?.ours
+                  ? "border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40"
+                  : "border-zinc-200 dark:border-zinc-700",
+                (prompt === null || PLACEHOLDERS.has(prompt)) &&
+                  "text-zinc-400 italic dark:text-zinc-500",
+              ]}
+            >
+              {prompt ?? "Not available"}
+            </div>
+          ))}
+        </div>
+      </>
+    )
+  }
+</div>
+
+<script>
+  function setupRow(row: HTMLElement) {
+    const videos = Array.from(
+      row.querySelectorAll<HTMLVideoElement>("video[data-src]"),
+    );
+    let loaded = false;
+    let inView = false;
+    let ready = 0;
+    let ended = 0;
+    const allReady = () => ready >= videos.length;
+
+    // Start every video in the row from frame 0 at the same moment.
+    const startAll = () => {
+      ended = 0;
+      for (const video of videos) {
+        video.currentTime = 0;
+        video.play().catch(() => {});
+      }
+    };
+
+    for (const video of videos) {
+      const markReady = () => {
+        ready += 1;
+        if (allReady() && inView) startAll();
+      };
+      video.addEventListener("canplay", markReady, { once: true });
+      video.addEventListener("error", markReady, { once: true });
+      // Loop the whole row together: restart when the last video has finished.
+      video.addEventListener("ended", () => {
+        ended += 1;
+        if (ended >= videos.length && inView) startAll();
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        inView = entries.some((entry) => entry.isIntersecting);
+        if (!inView) {
+          for (const video of videos) video.pause();
+          return;
+        }
+        if (!loaded) {
+          loaded = true;
+          for (const video of videos) {
+            video.preload = "auto";
+            video.src = video.dataset.src ?? "";
+            video.load();
+          }
+        } else if (allReady()) {
+          startAll();
+        }
+      },
+      { rootMargin: "200px 0px", threshold: 0.01 },
+    );
+    observer.observe(row);
+
+    // Prompt toggle.
+    const button = row.querySelector<HTMLButtonElement>(
+      "[data-toggle-prompts]",
+    );
+    const prompts = row.querySelector<HTMLElement>("[data-prompts]");
+    if (button && prompts) {
+      button.addEventListener("click", () => {
+        const open = prompts.classList.toggle("hidden") === false;
+        prompts.classList.toggle("grid", open);
+        button.setAttribute("aria-expanded", String(open));
+        button
+          .querySelector("[data-label-show]")
+          ?.classList.toggle("hidden", open);
+        button
+          .querySelector("[data-label-hide]")
+          ?.classList.toggle("hidden", !open);
+      });
+    }
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-row]").forEach(setupRow);
+</script>

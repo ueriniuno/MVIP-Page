@@ -1,0 +1,89 @@
+---
+# Browser-tab title and link-preview card. The on-page title is set on <Header> below.
+title: Meta Inverse Prompting for Video Generative Models
+theme: device
+description: MVIP recovers the text prompt behind a video so that a frozen video generator can reconstruct, transfer, and edit it.
+---
+
+import Header from "./components/Header.astro";
+import Video from "./components/Video.astro";
+import Picture from "./components/Picture.astro";
+import HighlightedSection from "./components/HighlightedSection.astro";
+import ConceptFigure from "./components/ConceptFigure.astro";
+import VideoGrid from "./components/VideoGrid.astro";
+import EditCarousel from "./components/EditCarousel.astro";
+import References from "./components/References.astro";
+import { asset } from "./lib/assets";
+import { reconstructionGrid, editingGrid } from "./data/grids";
+import overview from "./assets/mvip-overview.png";
+import concept from "./assets/mvip-concept.png";
+
+<Header
+  title="Meta Inverse Prompting for Video Generative Models"
+  conference="NeurIPS 2026"
+  authors={[{ name: "Yerin Jung" }, { name: "Jongheon Jeong" }]}
+  affiliation="Korea University"
+  links={[
+    { name: "Paper", url: "https://arxiv.org/pdf/2610.24965", icon: "ri:file-pdf-2-line" },
+    { name: "arXiv", url: "https://arxiv.org/abs/2610.24965", icon: "academicons:arxiv" },
+    { name: "Code", url: "https://github.com/ueriniuno/MVIP", icon: "ri:github-line" },
+  ]}
+>
+  <Video
+    slot="background"
+    src={asset("assets/reconstruction/example_01/mvip_horsejump_high.mp4")}
+    controls={false}
+  />
+</Header>
+
+<ConceptFigure
+  target="assets/reconstruction/example_09/reference.mp4"
+  reconstruction="assets/reconstruction/example_09/mvip.mp4"
+  prompt="The video captures a person kiteboarding on a clear day at the beach. The person is wearing a black helmet and a life jacket, and they are holding onto a blue handle attached to a kite that is not visible in the frame. The person is riding a blue surfboard and is moving towards the right side of the frame."
+/>
+
+<HighlightedSection>
+
+## Abstract
+
+Recent advances in video generative models have enabled flexible conditional generation and editing pipelines, such as text-to-video, image-to-video, and reference-guided synthesis. However, these workflows are inherently one-directional, mapping conditions to videos without providing a mechanism to invert this process. In complex media production settings, the ability to recover controllable textual conditions from a given video is highly desirable, yet remains underexplored.
+
+While inverse prompting has been studied for image generation, directly extending these approaches to video is challenging due to the need to capture temporal dynamics beyond static appearance, as well as the substantial computational cost of per-video optimization. In this work, we propose the first practical framework for efficient video inverse prompting. Specifically, we formulate inverse prompting as a meta-learning problem and introduce **Meta Video Inverse Prompting (MVIP)**, which learns a meta-prompt optimized over temporal dimensions to enable fast and effective prompt inference. Our approach amortizes the inversion process, eliminating the need for costly iterative optimization at test time.
+
+Experimental results demonstrate that MVIP recovers higher-quality inverse prompts with significantly improved reconstruction fidelity compared to image-based inversion and iterative captioning baselines, while achieving substantial gains in efficiency.
+
+</HighlightedSection>
+
+## Method
+
+Existing workflows to access video generative models are inherently unidirectional: conditions can guide video synthesis, but there is no clear mechanism to invert this process. A creator may generate a video from a prompt and later wish to modify it, such as changing lighting or motion while preserving the scene. However, the original prompt is often unavailable or insufficient to reproduce the video, forcing users to rely on trial-and-error prompt engineering. Our goal is inverse prompting: recovering a reusable prompt from a target video, enabling both faithful video reconstruction and controllable prompt-based video editing.
+
+<Picture
+  src={concept}
+  alt="Top: a target video is inverted into a prompt, and a video generator conditioned on that prompt reconstructs the video. Bottom: editing the recovered prompt (stationary to take off) and regenerating yields the edited video."
+/>
+
+Prior inverse-prompting approaches do not scale well to video: gradient-based prompt optimization requires repeated forward and backward passes, which becomes prohibitively expensive for long video sequences, while captioning produces semantically plausible but insufficient prompts to support reconstruction. Our key idea is to unify the two within a meta-learning formulation: instead of optimizing prompts from scratch for each video, MVIP learns a shared prompt initialization across videos, which at inference time enables rapid prompt inference without costly per-video optimization, effectively behaving as a reconstruction-aware captioning mechanism.
+
+<Picture
+  src={overview}
+  alt="Overview of MVIP: a pool of video tasks, an inner loop of reconstruction-guided adaptation with a frozen VLM and a frozen video generator, and an outer meta-update of the shared soft prompt."
+/>
+
+MVIP meta-learns a shared soft-prompt initialization Φ for video inverse prompting across video tasks. **Inner loop.** A frozen VLM generates candidate prompts, and the candidate with the highest reconstruction score from a frozen video generator is selected as a pseudo-target for updating Φ. **Outer loop.** The task-adapted prompts update the shared initialization following Reptile. **Inference.** The meta-learned Φ is applied directly to unseen video segments; the VLM and the video generator stay frozen throughout.
+
+## Video reconstruction
+
+Since text alone underconstrains video reconstruction, every method renders with the same frozen video generator conditioned on its prompt and the first and last frames of the target video, which specify how the video starts and ends.
+
+<VideoGrid {...reconstructionGrid} />
+
+## Prompt-based video editing
+
+GPT-4o minimally rewrites the recovered inverse prompt according to the edit instruction; the edited prompt and only the first frame of the source video are then used for video generation, without access to the benchmark target prompt or any editing-specific training.
+
+<EditCarousel {...editingGrid} />
+
+## References
+
+<References />

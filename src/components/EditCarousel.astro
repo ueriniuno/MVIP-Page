@@ -1,0 +1,109 @@
+---
+/**
+ * One slide per edit instruction: the instruction on top, then the column labels, then the
+ * source/edited videos side by side. Arrows and dots move between instructions.
+ */
+import { Icon } from "astro-icon/components";
+import type { VideoGridData } from "../data/grids";
+import GridHeader from "./GridHeader.astro";
+import VideoGridRow from "./VideoGridRow.astro";
+
+type Props = VideoGridData;
+
+const { columns, rows } = Astro.props;
+const minWidth = `min-width: calc(${columns.length} * 10rem + ${columns.length - 1} * 0.5rem);`;
+const navButton =
+  "shrink-0 rounded-full p-1.5 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800";
+---
+
+<div class="not-prose my-8 flex flex-col gap-4" data-carousel>
+  {
+    rows.map((row, index) => (
+      <section
+        class:list={["flex-col gap-3", index === 0 ? "flex" : "hidden"]}
+        data-slide
+        aria-label={`Edit ${index + 1} of ${rows.length}`}
+      >
+        <div class="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            class={navButton}
+            data-prev
+            aria-label="Previous edit"
+          >
+            <Icon name="ri:arrow-left-s-line" class="h-6 w-6" />
+          </button>
+          <p class="m-0 flex-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-center text-lg dark:border-amber-900 dark:bg-amber-950/40">
+            <span class="mr-2 font-semibold text-amber-800 dark:text-amber-300">
+              Edit instruction:
+            </span>
+            <span>{row.caption}</span>
+          </p>
+          <button
+            type="button"
+            class={navButton}
+            data-next
+            aria-label="Next edit"
+          >
+            <Icon name="ri:arrow-right-s-line" class="h-6 w-6" />
+          </button>
+        </div>
+        <div class="overflow-x-auto p-1">
+          <div class="flex flex-col gap-2" style={minWidth}>
+            <GridHeader columns={columns} />
+            <VideoGridRow columns={columns} row={{ videos: row.videos }} />
+          </div>
+        </div>
+      </section>
+    ))
+  }
+  <div
+    class="flex items-center justify-center gap-4 text-sm text-zinc-500 dark:text-zinc-400"
+  >
+    <div class="flex items-center gap-2">
+      {
+        rows.map((_, index) => (
+          <button
+            type="button"
+            class="h-2.5 w-2.5 rounded-full bg-zinc-300 transition aria-[current=true]:scale-125 aria-[current=true]:bg-blue-600 dark:bg-zinc-600 dark:aria-[current=true]:bg-blue-400"
+            data-dot
+            aria-current={index === 0 ? "true" : "false"}
+            aria-label={`Go to edit ${index + 1}`}
+          />
+        ))
+      }
+    </div>
+    <span class="font-mono text-xs" data-counter>1 / {rows.length}</span>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-carousel]").forEach((root) => {
+    const slides = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-slide]"),
+    );
+    const dots = Array.from(root.querySelectorAll<HTMLElement>("[data-dot]"));
+    const counter = root.querySelector<HTMLElement>("[data-counter]");
+    let index = 0;
+
+    function show(next: number) {
+      index = (next + slides.length) % slides.length;
+      slides.forEach((slide, i) => {
+        slide.classList.toggle("hidden", i !== index);
+        slide.classList.toggle("flex", i === index);
+      });
+      dots.forEach((dot, i) =>
+        dot.setAttribute("aria-current", i === index ? "true" : "false"),
+      );
+      if (counter) counter.textContent = `${index + 1} / ${slides.length}`;
+    }
+
+    root
+      .querySelectorAll("[data-prev]")
+      .forEach((b) => b.addEventListener("click", () => show(index - 1)));
+    root
+      .querySelectorAll("[data-next]")
+      .forEach((b) => b.addEventListener("click", () => show(index + 1)));
+    dots.forEach((dot, i) => dot.addEventListener("click", () => show(i)));
+  });
+</script>

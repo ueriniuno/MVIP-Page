@@ -1,0 +1,83 @@
+---
+/** Target video → recovered prompt → reconstruction, the one-line summary of inverse prompting. */
+interface Props {
+  /** Paths relative to the site base URL, e.g. "assets/reconstruction/example_09/reference.mp4". */
+  target: string;
+  reconstruction: string;
+  prompt: string;
+}
+
+const { target, reconstruction, prompt } = Astro.props;
+
+const base = import.meta.env.BASE_URL;
+const prefix = base.endsWith("/") ? base : base + "/";
+const labelClass =
+  "mb-2 block text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400";
+const videoClass =
+  "aspect-video w-full rounded-lg bg-zinc-100 object-cover dark:bg-zinc-800";
+const arrowClass =
+  "flex items-center justify-center gap-1 text-zinc-500 md:flex-col dark:text-zinc-400";
+const arrowLabelClass = "text-xs font-semibold tracking-wide uppercase";
+---
+
+<div
+  class="not-prose my-8 grid items-center gap-4 md:grid-cols-[1.2fr_auto_1fr_auto_1.2fr]"
+>
+  <div>
+    <span class={labelClass}>Target video</span>
+    <video
+      class={videoClass}
+      src={prefix + target}
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="metadata"></video>
+  </div>
+  <div class={arrowClass} aria-hidden="true">
+    <svg
+      class="h-4 w-12 rotate-90 md:rotate-0"
+      viewBox="0 0 46 18"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"><path d="M1 9h42M36 2l8 7-8 7"></path></svg
+    >
+    <span class={arrowLabelClass}>MVIP</span>
+  </div>
+  <div>
+    <span class={labelClass}>Recovered prompt</span>
+    <p
+      class="m-0 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-relaxed dark:border-blue-900 dark:bg-blue-950/40"
+    >
+      “{prompt} …”
+    </p>
+  </div>
+  <div class={arrowClass} aria-hidden="true">
+    <svg
+      class="h-4 w-12 rotate-90 md:rotate-0"
+      viewBox="0 0 46 18"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"><path d="M1 9h42M36 2l8 7-8 7"></path></svg
+    >
+    <span class={arrowLabelClass}>Generator</span>
+  </div>
+  <div>
+    <span class={labelClass}>Reconstruction</span>
+    <video
+      class:list={[
+        videoClass,
+        "outline-2 outline-offset-2 outline-blue-600 dark:outline-blue-400",
+      ]}
+      src={prefix + reconstruction}
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="metadata"></video>
+  </div>
+</div>

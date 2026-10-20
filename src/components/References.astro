@@ -1,0 +1,16 @@
+---
+/** Plain numbered reference list; [n] links in column labels point at these entries. */
+import { REFERENCES } from "../data/references";
+---
+
+<div
+  class="not-prose flex flex-col gap-3 text-sm text-zinc-700 dark:text-zinc-300"
+>
+  {
+    REFERENCES.map((ref, index) => (
+      <p id={`bib-${ref.key}`} class="m-0 scroll-mt-6">
+        [{index + 1}] {ref.authors}. {ref.title}. {ref.venue}.
+      </p>
+    ))
+  }
+</div>

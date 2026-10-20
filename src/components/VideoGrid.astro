@@ -1,0 +1,23 @@
+---
+/**
+ * Side-by-side video grid: column labels once at the top, then one row per example.
+ * On narrow screens the whole grid scrolls sideways so the labels stay aligned with the columns.
+ */
+import type { VideoGridData } from "../data/grids";
+import GridHeader from "./GridHeader.astro";
+import VideoGridRow from "./VideoGridRow.astro";
+
+type Props = VideoGridData;
+
+const { columns, rows } = Astro.props;
+// Columns never get narrower than 10rem (gap-2 = 0.5rem). The p-1 leaves room for the
+// highlighted column's outline, which the scroll container would otherwise clip.
+const minWidth = `min-width: calc(${columns.length} * 10rem + ${columns.length - 1} * 0.5rem);`;
+---
+
+<div class="not-prose my-8 overflow-x-auto p-1">
+  <div class="flex flex-col gap-4" style={minWidth}>
+    <GridHeader columns={columns} />
+    {rows.map((row) => <VideoGridRow columns={columns} row={row} />)}
+  </div>
+</div>
